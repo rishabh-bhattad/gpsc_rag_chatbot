@@ -2,6 +2,7 @@ import os
 import fitz
 import re
 import docx
+from dateutil import parser
 
 
 def extract_date(text: str):
@@ -16,7 +17,19 @@ def extract_date(text: str):
     if result:
         return result.group(0)
     else:
-        return "Unknown Date"
+        return None
+
+
+def normalize_date(date: str = None):
+    if date:
+        date_cleaned = re.sub(r"(\d)(st|nd|th|rd)", r"\1", date)
+        try:
+            dt_object = parser.parse(date_cleaned)
+            return dt_object.strftime("%Y-%m-%d")
+        except:
+            return None
+    else:
+        return None
 
 
 def parse_pdf(filepath: str):
@@ -25,7 +38,7 @@ def parse_pdf(filepath: str):
     for page in doc:
         pages.append(page.get_text())
     doc_text = "\n".join(pages)
-    date = extract_date(doc_text)
+    date = normalize_date(extract_date(doc_text))
     return doc_text, date
 
 
@@ -35,7 +48,7 @@ def parse_docx(filepath: str):
     for para in doc.paragraphs:
         paragraphs.append(para.text)
     doc_text = "\n".join(paragraphs)
-    date = extract_date(doc_text)
+    date = normalize_date(extract_date(doc_text))
     return doc_text, date
 
 
