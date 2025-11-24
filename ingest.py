@@ -52,7 +52,32 @@ def parse_docx(filepath: str):
     return doc_text, date
 
 
+def chunk_text(text: str, date: str, chunk_size: int = 1000, overlap:int = 200):
+    chunks = []
+
+    start = 0
+    text_length = len(text)
+
+    while start < text_length:
+        end = min(start + chunk_size, text_length)
+        chunk_content = text[start : end]
+        chunks.append(
+            {
+                "text": chunk_content,
+                "date": date
+            }
+        )
+
+        start += (chunk_size - overlap)
+        if end == text_length:
+            break
+
+    return chunks
+
+
 text, date = parse_pdf("data/raw/GC Minutes_10-31-18.pdf")
 print(date)
 text, date = parse_docx("data/raw/GPSC GC Meeting Minutes 2_13_2025.docx")
 print(date)
+
+print(chunk_text(text, date))
