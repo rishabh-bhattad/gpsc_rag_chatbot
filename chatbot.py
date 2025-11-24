@@ -24,5 +24,17 @@ def retrieve_documents(query: str, n_results: int = 5) -> List[str]:
     
 
 # RAG
-def query_rag():
-    pass
+def query_rag(user_question: str) -> Dict[str, Any]:
+    contexts = retrieve_documents(query=user_question)
+    if contexts:
+        cleaned_contexts = [doc.replace("\n", " ") for doc in contexts]
+        context_str = "\n\n".join(cleaned_contexts)
+        prompt = f"{SYSTEM_PROMPT}\n\nCONTEXT:\n{context_str}\n\nQUESTION:\n{user_question}"
+        response = ollama.chat(
+            model="llama3",
+            messages=[{'role': 'user', 'content': prompt}]
+        )
+        return {"answer": response['message']['content'], "context": contexts}
+    else:
+        return {"answer": "I could not find any relevant meeting minutes.", "context": []}
+
