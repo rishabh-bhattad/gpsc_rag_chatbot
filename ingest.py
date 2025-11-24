@@ -3,6 +3,7 @@ import fitz
 import re
 import docx
 from dateutil import parser
+from db_utils import get_chroma_collection
 
 
 def extract_date(text: str):
@@ -75,9 +76,30 @@ def chunk_text(text: str, date: str, chunk_size: int = 1000, overlap:int = 200):
     return chunks
 
 
-text, date = parse_pdf("data/raw/GC Minutes_10-31-18.pdf")
-print(date)
-text, date = parse_docx("data/raw/GPSC GC Meeting Minutes 2_13_2025.docx")
-print(date)
+def main():
+    chroma_collection = get_chroma_collection("gpsc_pilot_v1")
+    for dirpath, dirnames, filenames in os.walk("data/raw"):
+        for filename in filenames:
+            if filename.endswith(".pdf"):
+                file_text, date = parse_pdf(os.path.join(dirpath, filename))
+            elif filename.endswith(".docx"):
+                file_text, date = parse_docx(os.path.join(dirpath, filename))
+            else:
+                continue
+            safe_date = date if date else "Unknown"
+            chunks = chunk_text(text=file_text, date=date)
+            ids, documents, metadata = [], [], []
+            for index, chunk in enumerate(chunks):
+                unique_id = f"{filename}_chunk_{index}"
+                document = chunk['text']
+                ids.append(unique_id)
+                documents.append(document)
+                metadata.append({"source": filename, "date": safe_date})
+            if ids:
+                chroma_collection.upsert(ids=ids, documents=documents, metadatas=metadata)
+                print(f"Saved {len(ids)} chunks from {filename}.")
+            else:
+                print(f"No text found in {filename}.")
 
-print(chunk_text(text, date))
+if __name__ == "__main__":
+    main()
