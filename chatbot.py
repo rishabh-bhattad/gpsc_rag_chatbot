@@ -12,29 +12,59 @@ Do not make up facts.
 """
 
 # Retrieval Layer
-def retrieve_documents(query: str, n_results: int = 5) -> List[str]:
+def retrieve_documents(query: str, n_results: int = 10) -> List[Dict[str, Any]]:
     collection = get_chroma_collection(COLLECTION_NAME)
 
     results = collection.query(query_texts=[query], n_results=n_results)
-
+    return_list = []
     if results['documents'] and results['documents'][0]:
-        return list(results['documents'][0])
-    else:
-        return []
+        for document, metadata in zip(results["documents"][0], results["metadatas"][0]):
+            return_list.append(
+                {
+                    "text": document.replace("\n", " ").replace("\u200b", ""),
+                    "source": metadata['source'],
+                    "date": metadata['date']
+                }
+            )
+    return return_list
     
 
 # RAG
 def query_rag(user_question: str) -> Dict[str, Any]:
     contexts = retrieve_documents(query=user_question)
     if contexts:
-        cleaned_contexts = [doc.replace("\n", " ") for doc in contexts]
+        cleaned_contexts = [dict['text'].replace("\n", " ") for dict in contexts]
         context_str = "\n\n".join(cleaned_contexts)
         prompt = f"{SYSTEM_PROMPT}\n\nCONTEXT:\n{context_str}\n\nQUESTION:\n{user_question}"
         response = ollama.chat(
-            model="llama3",
-            messages=[{'role': 'user', 'content': prompt}]
+            model="qwen2.5:32b",
+            messages=[
+                {
+                    'role': 'user',
+                    'content': prompt
+                }
+            ]
         )
         return {"answer": response['message']['content'], "context": contexts}
     else:
         return {"answer": "I could not find any relevant meeting minutes.", "context": []}
 
+
+if __name__ == "__main__":
+    while True:
+        user_query = input("Ask me something: ")
+        if user_query in ["quit", "exit"]:
+            break
+        response = query_rag(user_question=user_query)
+        print(f"\nAI: {response['answer']}")
+        print("\nSources:")
+        if response['context']:
+            seen_sources = []
+            for item in response['context']:
+                if item['source'] not in seen_sources:
+                    print(f"File: {item['source']} | Date: {item['date']}")
+                    seen_sources.append(item['source'])
+        else:
+            print("No sources used.")
+            
+        print("\n" + "-"*30 + "\n")
