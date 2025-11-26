@@ -21,6 +21,12 @@ def extract_date(text: str):
         return None
 
 
+def extract_date_from_filename_fallback(filename: str):
+    match = re.search(r"\d{1,2}[-_]\d{1,2}[-_]\d{2,4}", filename)
+    if match:
+        return normalize_date(match.group(0).replace("_", "-"))
+    return None
+
 def normalize_date(date: str = None):
     if date:
         date_cleaned = re.sub(r"(\d)(st|nd|th|rd)", r"\1", date)
@@ -86,6 +92,7 @@ def main():
                 file_text, date = parse_docx(os.path.join(dirpath, filename))
             else:
                 continue
+            date = date  if date else extract_date_from_filename_fallback(filename=filename)
             safe_date = date if date else "Unknown"
             chunks = chunk_text(text=file_text, date=date)
             ids, documents, metadata = [], [], []
