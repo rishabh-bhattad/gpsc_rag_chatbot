@@ -4,6 +4,7 @@ from typing import List, Dict, Any
 from db_utils import get_chroma_collection, COLLECTION_NAME
 from sentence_transformers import CrossEncoder
 import torch
+import time
 
 # System Prompt
 SYSTEM_PROMPT = """
@@ -30,7 +31,7 @@ RERANKER = CrossEncoder('BAAI/bge-reranker-base', device=device)
 # Retrieval Layer
 def retrieve_documents(query: str, n_results: int = 5, candidate_count: int = 25) -> List[Dict[str, Any]]:
     collection = get_chroma_collection(COLLECTION_NAME)
-
+    start_retrieval = time.time()
     results = collection.query(query_texts=[query], n_results=candidate_count)
     return_list = []
     if results['documents'] and results['documents'][0]:
@@ -47,6 +48,8 @@ def retrieve_documents(query: str, n_results: int = 5, candidate_count: int = 25
                     "date": metadata['date']
                 }
             )
+    end_retrieval = time.time()
+    print(f"\n[TIMING] Retrieval + ReRanker: {end_retrieval - start_retrieval:.2f} seconds")
     return return_list
     
 
@@ -54,11 +57,12 @@ def retrieve_documents(query: str, n_results: int = 5, candidate_count: int = 25
 def query_rag(user_question: str) -> Dict[str, Any]:
     contexts = retrieve_documents(query=user_question)
     if contexts:
+        start_gen = time.time()
         cleaned_contexts = [f"[Date: {item['date']}] {item['text'].replace('\n', ' ')}" for item in contexts]
         context_str = "\n\n".join(cleaned_contexts)
         user_payload = f"CONTEXT:\n{context_str}\n\nQUESTION:\n{user_question}\n\nINSTRUCTION:\nRemember to strictly structure your answer into two distinct sections: 'Current Academic Year (2025-2026)' and 'Historical Context'."
         response = ollama.chat(
-            model="qwen2.5:32b",
+            model="qwen2.5:14b",
             messages=[
                 {
                     'role': 'system',
@@ -70,6 +74,8 @@ def query_rag(user_question: str) -> Dict[str, Any]:
                 }
             ]
         )
+        end_gen = time.time()
+        print(f"[TIMING] LLM Generation: {end_gen - start_gen:.2f} seconds")
         return {"answer": response['message']['content'], "context": contexts}
     else:
         return {"answer": "I could not find any relevant meeting minutes.", "context": []}
