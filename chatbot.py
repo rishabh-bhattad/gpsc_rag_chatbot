@@ -29,7 +29,7 @@ print(f"Loading ReRanker on: {device}")
 RERANKER = CrossEncoder('BAAI/bge-reranker-base', device=device)
 
 # Retrieval Layer
-def retrieve_documents(query: str, n_results: int = 5, candidate_count: int = 25) -> List[Dict[str, Any]]:
+def retrieve_documents(query: str, n_results: int = 10, candidate_count: int = 50) -> List[Dict[str, Any]]:
     collection = get_chroma_collection(COLLECTION_NAME)
     start_retrieval = time.time()
     results = collection.query(query_texts=[query], n_results=candidate_count)

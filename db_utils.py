@@ -3,7 +3,7 @@ from chromadb.utils import embedding_functions
 
 CHROMA_PATH = "./data/chroma_db"
 COLLECTION_NAME = "gpsc_pilot_v1"
-EMBEDDING_MODEL = "nomic-embed-text"
+EMBEDDING_MODEL = "bge-m3"
 OLLAMA_URL = "http://localhost:11434/api/embeddings"
 
 def get_embedding_function():

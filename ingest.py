@@ -60,7 +60,7 @@ def parse_docx(filepath: str):
     return doc_text, date
 
 
-def chunk_text(text: str, date: str, chunk_size: int = 2000, overlap:int = 400):
+def chunk_text(text: str, date: str, chunk_size: int = 1500, overlap:int = 300):
     chunks = []
 
     start = 0
