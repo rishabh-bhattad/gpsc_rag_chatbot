@@ -2,6 +2,7 @@ import os, sys
 import ollama
 from typing import List, Dict, Any
 from db_utils import get_chroma_collection, COLLECTION_NAME
+from sentence_transformers import CrossEncoder
 
 # System Prompt
 SYSTEM_PROMPT = """
@@ -11,14 +12,21 @@ If the context does not contain the answer, politely state that you cannot find 
 Do not make up facts.
 """
 
+RERANKER = CrossEncoder('BAAI/bge-reranker-base')
+
 # Retrieval Layer
-def retrieve_documents(query: str, n_results: int = 10) -> List[Dict[str, Any]]:
+def retrieve_documents(query: str, n_results: int = 10, candidate_count: int = 50) -> List[Dict[str, Any]]:
     collection = get_chroma_collection(COLLECTION_NAME)
 
-    results = collection.query(query_texts=[query], n_results=n_results)
+    results = collection.query(query_texts=[query], n_results=candidate_count)
     return_list = []
     if results['documents'] and results['documents'][0]:
-        for document, metadata in zip(results["documents"][0], results["metadatas"][0]):
+        reranker_list = [[query, document] for document in results["documents"][0]]
+        relevance_scores = RERANKER.predict(reranker_list)
+        zipped_tuple = zip(relevance_scores, results["documents"][0], results["metadatas"][0])
+        sorted_list = sorted(zipped_tuple, reverse=True)[:n_results]
+        print(sorted(relevance_scores)[:1])
+        for scores, document, metadata in sorted_list:
             return_list.append(
                 {
                     "text": document.replace("\n", " ").replace("\u200b", ""),
