@@ -68,7 +68,9 @@ def chunk_text(text: str, date: str, chunk_size: int = 1500, overlap:int = 300):
 
     while start < text_length:
         end = min(start + chunk_size, text_length)
-        chunk_content = text[start : end]
+        raw_chunk = text[start : end]
+        # Stamp the date into the text so Vector Search can find it
+        chunk_content = f"[Date: {date}] {raw_chunk}"
         chunks.append(
             {
                 "text": chunk_content,
